@@ -1,0 +1,75 @@
+Independent measurements and calculations for the RFID Hub v2 rev A safety review.
+KiCad 9.0.9 loaded work/kicad/rfid_hub/rfid_hub.kicad_pcb (generator pcbnew 9.0).
+Board: 110.1 x 100.1 mm, 1.6 mm, 4 copper layers, min clearance 0.15 mm.
+Title block: 1 oz outer / 0.5 oz inner. No bottom-side footprints (394 footprints, all F.Cu).
+
+Datasheets used (not the designer's calculations.md):
+  TI LM74502 SLV/SNOSDE5A, LM66100 SLVSEZ8A, TPS2596 SLVSET8A, TPS54202
+  AOS AON6262E rev 1.1 (60 V, pins 1-3 source, 4 gate, 5-8+tab drain, VGS +/-20 V, Ciss 1650 pF)
+  Same Sky PJ-063AH / PJ-063BH (8.0 A, 24 Vdc; AH pin 2.0 mm, BH pin 2.5 mm)
+  Littelfuse 451 series 0451007: 7 A, melting I2t 10.32 A^2s, cold R 0.009 ohm, 125 V, interrupt 50 A
+  Ckmtw R-RJ45R08P-A004: 1.5 A, 125 Vac, operate 0 to 70 C; pitch 1.02 mm, row offset 1.78 mm, holes 12.70 mm
+
+Pin nets read from the loaded board (pad number = net):
+  U1 LM74502: 1 EN=VIN_F, 2 GND, 3 NC, 4 VCAP, 5 VS=VIN_F, 6 GATE, 7 OV, 8 SRC
+  U5 LM66100: 1 VIN=3V3_BUCK, 2 GND, 3 CE=+3V3, 4 NC, 5 ST, 6 VOUT=+3V3
+  Q1 drain+tab=VIN_F, source=Q_SRC, gate=Q_GATE
+  Q2 drain+tab=VIN_P, source=Q_SRC, gate=Q_GATE
+  U8/U9 TPS259630: 4 IN=12V_BUS, 5 OUT=OUTx_12V, 3 EN=OUTx_EN, 9 EP=GND (2x 0.3 mm vias in the EP)
+  D30/D32 SS34: pad 1 = OUTx_12V, pad 2 = GND (cathode on the switched rail)
+  D3/D31/D33 SMAJ17A: pad 1 = positive rail, pad 2 = GND
+  D2 SMBJ33CA: pad 1 = VIN_F (after F1), pad 2 = GND
+  J1 pad 1 = VIN_JACK, pad 2 = GND; J2/J5 pad 1 = OUTx_12V
+  J101 pad 7 = P1_3V3, pad 5 = GND, pads 1-4/6/8 = signals. D101 SRV05-4: 2=GND, 5=P1_3V3
+  H1-H4: NPTH 3.2 mm, no net
+
+Zone pad connection (KiCad enum: 0 none, 1 thermal, 2 full, 3 THT-thermal):
+  Power pours on F.Cu use THT-thermal, spoke 1.0 mm. GND planes use thermal, spoke 0.5 mm.
+  In2 filled areas do not overlap (2544-point grid, 0 overlaps):
+    +3V3 1005 mm^2, 12V_BUS 2570 mm^2, 3V3_PORT 5381 mm^2
+  F_OUT2_12V (50 mm^2) covers U8 pin 5 but not J5 pin 1.
+  J5 is fed by 2.0 mm tracks (e.g. 4.66 mm and 2.25 mm segments on y=187.46).
+  A parallel 0.09-0.12 mm snake on OUT2_12V is not the series path to the jack.
+  U8 pin 5 escapes through 0.61 mm for 0.24 mm, then 2.0 mm.
+
+Flyback distance (pad center to pad center):
+  U9 pin 5 to D30 pin 1: 15.5 mm
+  U8 pin 5 to D32 pin 1: 14.1 mm
+
+Mounting-hole edge clearance (distance from hole center to pad copper, then minus 1.6 mm radius):
+  H4 to D33 (OUT2_12V) 5.21 mm center-to-pad-edge
+  H3 to J1 GND mounting pin 5.50 mm
+
+IPC-2221 (KiCad's own calculator formula; external k=0.048, internal k=0.024, 1 oz = 1.378 mil):
+  I = k * dT^0.44 * A^0.725, A in mil^2
+  2.0 mm, 1 oz, external: 3.95 A at 10 C, 5.36 A at 20 C
+  0.61 mm, 1 oz, external: 1.67 A at 10 C, 2.27 A at 20 C
+  0.12 mm, 1 oz, external: 0.51 A at 10 C, 0.70 A at 20 C
+  0.09 mm, 1 oz, external: 0.42 A at 10 C, 0.57 A at 20 C
+  30 mm, 0.5 oz, internal: 8.5 A at 10 C, 11.6 A at 20 C
+  IPC-2152 outer-layer charts with a plane under the trace allow more current than IPC-2221
+  for the same rise, so an outer trace that passes IPC-2221 on this 4-layer board also
+  passes IPC-2152. The 0.5 oz inner pours are wide (12V_BUS ~2570 mm^2), not necks.
+
+Fault arithmetic:
+  LM74502 OV rising 1.165-1.333 V, R7=120k, R8=10k, 1%:
+    cutoff 14.87 V min, 16.25 V typ, 17.65 V max. 24 V is above the max.
+  Port OVLO rising 1.17-1.22 V, R74=2.2k, R75=1k, 1%:
+    trip 3.69 V min, 3.84 V typ, 3.96 V max.
+  TPS2596 ILIM = 903/R + 0.0112. R=470 -> 1.93 A typ.
+    R min in the datasheet is 453 ohm (window 1.83-2.15 A). 470 ohm 1% low is 465 ohm.
+    Scaled high side of the 453 ohm window is about 2.07 A, above the 2 A recommended continuous.
+  Port R=3.9k -> 0.243 A typ, datasheet window near 3.83k is 0.224-0.269 A.
+  Port short dissipation about 3.4 V * 0.27 A = 0.9 W.
+    RthJA 52.7 C/W (EP soldered) -> +47 C. TSD is 157 C, so a 3.3 V short does not latch off.
+  12 V hard short: P about 12 V * 1.9 A = 23 W until thermal shutdown. TPS259630 latches off.
+    FLT is NOT asserted for current limit or a short, only for TSD, OVLO, or ILM shorted.
+  Two outputs at 2.07 A + hub (1.23 A * 3.31 V / 0.85 + 0.65 A * 3.4 V / 0.85) / 12 V
+    = 4.14 + 0.62 = 4.76 A from a "5 A" supply.
+  Port 0.09 mm x 6.6 mm: 6.6/0.09 = 73 squares * 0.5 mohm/square = 37 mohm.
+    At 0.24 A, P = 2.1 mW. Not a fuse at the eFuse limit.
+  LM74502 gate: 2 * 45 nC / 60 uA = 1.5 ms. 470 uF * 12 V / 1 ms = 5.6 A if the cap slews
+    in 1 ms. Triangular 8 A for 1 ms is 0.021 A^2s, vs fuse melting 10.32 A^2s.
+  EN idle: TCA9555 ~100k pull-up vs 10k pull-down -> 3.4*10/110 = 0.31 V.
+    TPS2596 turns off below UVLO falling 1.08 V min.
+  SS34 Vf at ~1 A is about 0.45-0.55 V. TPS2596 OUT absolute minimum is -0.3 V.
